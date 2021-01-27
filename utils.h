@@ -19,6 +19,16 @@ typedef struct{
     int SO_DURATION;
   } settings;
 
+  typedef struct
+  {
+    int n_viaggi;
+    int v_comp;
+    int v_abort;
+    int evasi;
+    int top_cells[SO_WIDTH * SO_HEIGHT];
+    taxi_stat top_taxi;
+  } stats;
+
   /*functions*/
   settings cfg(settings rules);
   void signal_handler(int sig);

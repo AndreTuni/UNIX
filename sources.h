@@ -12,9 +12,8 @@ typedef struct
 } message;
 
   /*functions*/
-  settings cfg(settings rules);
-  void signal_handler(int sig);
-  void print_stats(shared_data *shared, settings rules);
+  message msg_gen(map my_map, cell s);
+  void print_msg(message msg);
 
 
 #endif
