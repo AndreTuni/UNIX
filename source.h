@@ -1,15 +1,18 @@
-#ifndef SOURCES_H
-#define SOURCES_H
+#ifndef SOURCE_H
+#define SOURCE_H
+
 
 /*structs*/
-
 
 typedef struct
 {
   long mtype;
+  int created_by;
   cell origin;
   cell dest;
 } message;
+
+
 
   /*functions*/
   message msg_gen(map my_map, cell s);

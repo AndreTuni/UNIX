@@ -13,15 +13,21 @@
 #include <time.h>
 #include <unistd.h>
 #include "map.h"
-#include "sources.h"
+#include "source.h"
 #include "taxi.h"
 #include "utils.h"
+
+
+
+
+#define SIZE sizeof(msg) - sizeof(long)
+
 
 int parent_pid, q_id, shm_id, sem_id, sem_id_cell, child_pid, flag, segnale;
 int *taxis, *sources;
 
 int main()
-{
+ {
   int i, j, status;
   sigset_t my_mask;
   struct sembuf sops;
@@ -29,12 +35,12 @@ int main()
   unsigned int my_pid;
   sem_id_cell = semget(IPC_PRIVATE, SO_WIDTH * SO_HEIGHT, 0600);
   parent_pid = getpid();
-
   srand(getpid());
   settings rules;
   message msg;
   rules = cfg(rules);
   shared_data *shared;
+  printf("coccodio\n");
   shm_id = shmget(IPC_PRIVATE, sizeof(*shared), 0600);
   sem_id = semget(IPC_PRIVATE, 4, 0600);
   q_id = msgget(IPC_PRIVATE, IPC_CREAT | IPC_EXCL | 0600);

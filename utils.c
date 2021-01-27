@@ -12,11 +12,17 @@
 #include <sys/wait.h>
 #include <time.h>
 #include <unistd.h>
+#include "map.h"
+#include "source.h"
+#include "taxi.h"
 #include "utils.h"
 
 
-
 /*----------------------------------------------------------------------------*/
+int shm_id, parent_pid, q_id, sem_id, sem_id_cell;
+
+
+int *taxis, *sources;
 
 settings cfg(settings rules)
 {
@@ -132,4 +138,186 @@ void print_stats(shared_data *shared, settings rules)
   }
 }
 
+/*----------------------------------------------------------------------------*/
+
+map map_gen(settings rules, struct sembuf sops)
+{
+  int i, j, x, y, id, c, k;
+  map new_map;
+  int max_holes = SO_WIDTH * SO_HEIGHT / 9;
+  if (rules.SO_HOLES > max_holes)
+  {
+    printf(
+        "**IMPOSSIBILE CREARE UNA MAPPA ADEGUATA** \n**AMPLIARE LA MAPPA O "
+        "RIDURRE IL NUMERO DI SO_HOLES**\n");
+    exit(0);
+  }
+  else
+  {
+    id = 1;
+    for (i = 0; i < SO_WIDTH; i++)
+    {
+      for (j = 0; j < SO_HEIGHT; j++)
+      {
+        new_map.city[i][j] = cell_gen(rules, i, j, id, sops);
+        id++;
+      }
+    }
+    k = 0;
+    while (k < rules.SO_HOLES + 1)
+    {
+      // se la cella estratta è sui bordi della mappa non può essere hole
+      x = random_extraction(1, SO_WIDTH - 2);
+      y = random_extraction(1, SO_HEIGHT - 2);
+      if (check_neighbours(new_map, new_map.city[x][y], x, y) == 1)
+      {
+        new_map.city[x][y] = hole_gen(new_map.city[x][y]);
+        k++;
+      }
+    }
+    k = 0;
+    while (k < rules.SO_SOURCES)
+    {
+      x = random_extraction(0, SO_WIDTH - 1);
+      y = random_extraction(0, SO_HEIGHT - 1);
+      if (new_map.city[x][y].type == 1)
+      {
+        new_map.city[x][y] = source_gen(new_map.city[x][y]);
+        k++;
+      }
+    }
+  }
+  return new_map;
+}
+
+/*----------------------------------------------------------------------------*/
+
+cell cell_gen(settings rules, int x, int y, int id, struct sembuf sops)
+{
+  cell new_cell;
+  new_cell.id = id;
+  new_cell.x = x;
+  new_cell.y = y;
+  new_cell.t_attr =
+      random_extraction(rules.SO_TIMENSEC_MIN, rules.SO_TIMENSEC_MAX);
+  new_cell.cap = random_extraction(rules.SO_CAP_MIN, rules.SO_CAP_MAX);
+  new_cell.type = 1; // definito dopo
+  new_cell.here = 0;
+  new_cell.n_attr = 0;
+  semctl(sem_id_cell, id - 1, SETVAL, new_cell.cap);
+
+  new_cell.sem_id = sem_id_cell;
+  return new_cell;
+}
+
+/*----------------------------------------------------------------------------*/
+cell get_new_source(shared_data *shared)
+{
+  cell s;
+  int i = 0;
+  while (i < 1)
+  {
+    s = get_random_source(shared->m);
+    if ((shared->m.city[s.x][s.y].status == 0))
+    {
+      shared->m.city[s.x][s.y].status = 1;
+      i++;
+    }
+  }
+  return s;
+}
+
+
+/*----------------------------------------------------------------------------*/
+
+int random_extraction(int a, int b)
+{
+  int r;
+  if (a < b)
+  {
+    r = (rand() % (b - a + 1)) + a;
+  }
+  else
+  {
+    r = (rand() % (a - b + 1)) + b;
+  }
+  return r;
+}
+
+
+/*----------------------------------------------------------------------------*/
+
+/* Release the resource */
+int sem_release(int sem_id, int sem_num)
+{
+  struct sembuf sops;
+  // printf("pid %d rilascia su %d \n", getpid(), sem_num + 1);
+  sops.sem_num = sem_num;
+  sops.sem_op = 1;
+  sops.sem_flg = 0;
+
+  return semop(sem_id, &sops, 1);
+}
+
+/*----------------------------------------------------------------------------*/
+/* Try to access the resource */
+int sem_reserve(int sem_id, int sem_num)
+{
+  struct sembuf sops;
+  // printf("pid %d waiting on sem %d\n", getpid(), sem_num + 1);
+
+  sops.sem_num = sem_num;
+  sops.sem_op = -1;
+  sops.sem_flg = 0;
+  return semop(sem_id, &sops, 1);
+}
+
+/*----------------------------------------------------------------------------*/
+
+int sem_reserve_sim(int sem_id, int sem_num)
+{
+  struct sembuf sops;
+  settings rules;
+  rules = cfg(rules);
+  int i;
+  int r;
+  // printf("pid %d waiting in cell %d\n", getpid(), sem_num + 1);
+
+  sops.sem_num = sem_num;
+  sops.sem_op = -1;
+  if (r = semop(sem_id, &sops, 1) < 0)
+  {
+    if (errno == EINTR)
+    {
+      printf(" pid %d exit 129\n", getpid());
+      // for (i = 0; i < rules.SO_TAXI; i++) {
+      //   if (taxis[i] == getpid()) {
+      //     taxis[i] = 0;
+      //   }
+      //   printf(" %d \n", taxis[i]);
+      // }
+      // sem_release(sem_id, sem_num);
+      exit(129);
+    }
+    else
+    {
+      TEST_ERROR;
+    }
+  }
+  // printf("semop = %d\n", r);
+  return r;
+}
+
+
+/*----------------------------------------------------------------------------*/
+int wait_for_zero(int sem_id, int sem_num)
+{
+  struct sembuf sops;
+  sops.sem_num = sem_num;
+  sops.sem_op = -1;
+  semop(sem_id, &sops, 1);
+
+  sops.sem_op = 0;
+  return semop(sem_id, &sops, 1);
+}
 /*----------------------------------------------------------------------------*/

@@ -12,9 +12,13 @@
 #include <sys/wait.h>
 #include <time.h>
 #include <unistd.h>
+#include "map.h"
+#include "source.h"
 #include "taxi.h"
-
+#include "utils.h"
 /*----------------------------------------------------------------------------*/
+
+int sem_id_cell;
 
 cell set_taxi(shared_data *shared)
 {
@@ -67,6 +71,75 @@ void print_taxi(taxi t)
 /*----------------------------------------------------------------------------*/
 
 int manhattan(int a, int b, int x, int y) { return abs(a - b) + abs(x - y); }
+
+/*----------------------------------------------------------------------------*/
+
+cell go_up(shared_data *shared, cell position, taxi t)
+{
+  cell next_pos;
+  // printf("Going up\n");
+
+  next_pos = shared->m.city[position.x - 1][position.y];
+  shared->m.city[position.x - 1][position.y].n_attr++;
+  t.stats.km[1]++;
+  t.stats.tempo[1] = t.stats.tempo[1] + next_pos.t_attr;
+  my_time.tv_sec = 1;
+  my_time.tv_nsec = next_pos.t_attr;
+  nanosleep(&my_time, NULL);
+  return next_pos;
+}
+
+/*----------------------------------------------------------------------------*/
+
+cell go_down(shared_data *shared, cell position, taxi t)
+{
+  cell next_pos;
+  // printf("Going down\n");
+  next_pos = shared->m.city[position.x + 1][position.y];
+  shared->m.city[position.x + 1][position.y].n_attr++;
+  t.stats.km[1]++;
+  t.stats.tempo[1] = t.stats.tempo[1] + next_pos.t_attr;
+  my_time.tv_sec = 1;
+  my_time.tv_nsec = next_pos.t_attr;
+  nanosleep(&my_time, NULL);
+  return next_pos;
+}
+
+/*----------------------------------------------------------------------------*/
+
+cell go_left(shared_data *shared, cell position, taxi t)
+{
+  cell next_pos;
+  // printf("Going left\n");
+  next_pos = shared->m.city[position.x][position.y - 1];
+  shared->m.city[position.x][position.y - 1].n_attr++;
+  t.stats.km[1]++;
+  t.stats.tempo[1] = t.stats.tempo[1] + next_pos.t_attr;
+  my_time.tv_sec = 1;
+  my_time.tv_nsec = next_pos.t_attr;
+  nanosleep(&my_time, NULL);
+  return next_pos;
+}
+
+/*----------------------------------------------------------------------------*/
+
+cell go_right(shared_data *shared, cell position, taxi t)
+{
+  cell next_pos;
+  // printf("Going right\n");
+
+  next_pos = shared->m.city[position.x][position.y + 1];
+  shared->m.city[position.x][position.y + 1].n_attr++;
+  t.stats.km[1]++;
+  t.stats.tempo[1] = t.stats.tempo[1] + next_pos.t_attr;
+  my_time.tv_sec = 1;
+  my_time.tv_nsec = next_pos.t_attr;
+  nanosleep(&my_time, NULL);
+  return next_pos;
+}
+
+/*----------------------------------------------------------------------------*/
+
 
 taxi drive(shared_data *shared, taxi t)
 {
