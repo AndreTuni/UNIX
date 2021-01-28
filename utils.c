@@ -251,7 +251,7 @@ int random_extraction(int a, int b)
 int sem_release(int sem_id, int sem_num)
 {
   struct sembuf sops;
-  // printf("pid %d rilascia su %d \n", getpid(), sem_num + 1);
+  printf("pid %d releases su %d \n", getpid(), sem_num + 1);
   sops.sem_num = sem_num;
   sops.sem_op = 1;
   sops.sem_flg = 0;
@@ -264,7 +264,7 @@ int sem_release(int sem_id, int sem_num)
 int sem_reserve(int sem_id, int sem_num)
 {
   struct sembuf sops;
-  // printf("pid %d waiting on sem %d\n", getpid(), sem_num + 1);
+   printf("pid %d waiting on sem %d\n", getpid(), sem_num);
 
   sops.sem_num = sem_num;
   sops.sem_op = -1;
@@ -281,7 +281,7 @@ int sem_reserve_sim(int sem_id, int sem_num)
   rules = cfg(rules);
   int i;
   int r;
-  // printf("pid %d waiting in cell %d\n", getpid(), sem_num + 1);
+  printf("pid %d waiting in cell %d\n", getpid(), sem_num + 1);
 
   sops.sem_num = sem_num;
   sops.sem_op = -1;
@@ -290,13 +290,7 @@ int sem_reserve_sim(int sem_id, int sem_num)
     if (errno == EINTR)
     {
       printf(" pid %d exit 129\n", getpid());
-      // for (i = 0; i < rules.SO_TAXI; i++) {
-      //   if (taxis[i] == getpid()) {
-      //     taxis[i] = 0;
-      //   }
-      //   printf(" %d \n", taxis[i]);
-      // }
-      // sem_release(sem_id, sem_num);
+
       exit(129);
     }
     else
@@ -304,7 +298,6 @@ int sem_reserve_sim(int sem_id, int sem_num)
       TEST_ERROR;
     }
   }
-  // printf("semop = %d\n", r);
   return r;
 }
 

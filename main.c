@@ -40,7 +40,6 @@ int main()
   message msg;
   rules = cfg(rules);
   shared_data *shared;
-  printf("coccodio\n");
   shm_id = shmget(IPC_PRIVATE, sizeof(*shared), 0600);
   sem_id = semget(IPC_PRIVATE, 4, 0600);
   q_id = msgget(IPC_PRIVATE, IPC_CREAT | IPC_EXCL | 0600);
@@ -126,6 +125,7 @@ int main()
       cab = taxi_gen(shared);
       /*fine sez critica*/
       sem_release(sem_id, 1);
+      print_taxi(cab);
 
       wait_for_zero(sem_id, 0);
 

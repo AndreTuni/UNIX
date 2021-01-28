@@ -7,13 +7,6 @@
 /*structs*/
 
 
-// typedef struct
-// { /* [0] = id, [1] = statistica*/
-//   int km[2];
-//   int tempo[2];
-//   int clienti[2];
-// } taxi_stat;
-
 typedef struct
 {
   int id;
@@ -24,31 +17,6 @@ typedef struct
   taxi_stat stats;
 } taxi;
 
-
-
-// typedef struct{
-//     int id;
-//     int x;
-//     int y;
-//     int t_attr;
-//     int cap;
-//     int type;
-//     int here;
-//     int n_attr;
-//     int status;
-//     int sem_id;
-// } cell;
-
-// typedef struct
-// {
-//   map m;
-//   stats s;
-//   int sim_timeout;
-//   int taxi_timeout;
-//   int sources[SO_WIDTH * SO_HEIGHT];
-//   int sources_ids[SO_WIDTH * SO_HEIGHT];
-//   int sem_ids[SO_WIDTH * SO_HEIGHT];
-// } shared_data;
 
 
   /*functions*/

@@ -77,7 +77,7 @@ int manhattan(int a, int b, int x, int y) { return abs(a - b) + abs(x - y); }
 cell go_up(shared_data *shared, cell position, taxi t)
 {
   cell next_pos;
-  // printf("Going up\n");
+  printf(" %d Going up\n", getpid());
 
   next_pos = shared->m.city[position.x - 1][position.y];
   shared->m.city[position.x - 1][position.y].n_attr++;
@@ -94,7 +94,7 @@ cell go_up(shared_data *shared, cell position, taxi t)
 cell go_down(shared_data *shared, cell position, taxi t)
 {
   cell next_pos;
-  // printf("Going down\n");
+  printf(" %d Going down\n", getpid());
   next_pos = shared->m.city[position.x + 1][position.y];
   shared->m.city[position.x + 1][position.y].n_attr++;
   t.stats.km[1]++;
@@ -110,7 +110,7 @@ cell go_down(shared_data *shared, cell position, taxi t)
 cell go_left(shared_data *shared, cell position, taxi t)
 {
   cell next_pos;
-  // printf("Going left\n");
+  printf(" %d Going left\n", getpid());
   next_pos = shared->m.city[position.x][position.y - 1];
   shared->m.city[position.x][position.y - 1].n_attr++;
   t.stats.km[1]++;
@@ -126,7 +126,7 @@ cell go_left(shared_data *shared, cell position, taxi t)
 cell go_right(shared_data *shared, cell position, taxi t)
 {
   cell next_pos;
-  // printf("Going right\n");
+   printf(" %d Going right\n", getpid());
 
   next_pos = shared->m.city[position.x][position.y + 1];
   shared->m.city[position.x][position.y + 1].n_attr++;
@@ -154,8 +154,8 @@ taxi drive(shared_data *shared, taxi t)
   {
     if (t.position.id == t.destination.id)
     {
-      //   printf("PID: %d DESTINATION REACHED at cell %d\n", t.id,
-      //   t.position.id);
+         printf("PID: %d DESTINATION REACHED at cell %d\n", t.id,
+         t.position.id);
       shared->s.v_comp++;
       r = 1;
       i++;
@@ -227,6 +227,13 @@ taxi drive(shared_data *shared, taxi t)
         alarm(0);
         // printf("PID: %d sem acquired\n", getpid());
         t.position = go_up(shared, t.position, t);
+        if (t.position.id == t.destination.id)
+        {
+            printf("PID: %d DESTINATION REACHED at cell %d\n", t.id, t.position.id);
+          shared->s.v_comp++;
+          r = 1;
+          i++;
+        }
         sem_release(sem_id_cell, tmp);
         shared->m.city[t.position.x + 1][t.position.y].here--;
       }
@@ -247,6 +254,13 @@ taxi drive(shared_data *shared, taxi t)
 
         // printf("PID: %d sem acquired\n", getpid());
         t.position = go_down(shared, t.position, t);
+        if (t.position.id == t.destination.id)
+        {
+            printf("PID: %d DESTINATION REACHED at cell %d\n", t.id, t.position.id);
+          shared->s.v_comp++;
+          r = 1;
+          i++;
+        }
         sem_release(sem_id_cell, tmp);
         shared->m.city[t.position.x - 1][t.position.y].here--;
       }
@@ -266,6 +280,13 @@ taxi drive(shared_data *shared, taxi t)
         alarm(0);
         //   printf("PID: %d sem acquired\n", getpid());
         t.position = go_left(shared, t.position, t);
+        if (t.position.id == t.destination.id)
+        {
+            printf("PID: %d DESTINATION REACHED at cell %d\n", t.id, t.position.id);
+          shared->s.v_comp++;
+          r = 1;
+          i++;
+        }
         sem_release(sem_id_cell, tmp);
         shared->m.city[t.position.x][t.position.y - 1].here--;
       }
@@ -287,6 +308,13 @@ taxi drive(shared_data *shared, taxi t)
         //   printf("PID: %d sem acquired\n", getpid());
         // shared->m.city[t.position.x][t.position.y].here--;
         t.position = go_right(shared, t.position, t);
+        if (t.position.id == t.destination.id)
+        {
+            printf("PID: %d DESTINATION REACHED at cell %d\n", t.id, t.position.id);
+          shared->s.v_comp++;
+          r = 1;
+          i++;
+        }
         sem_release(sem_id_cell, tmp);
         shared->m.city[t.position.x][t.position.y + 1].here--;
       }

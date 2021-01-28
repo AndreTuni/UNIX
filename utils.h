@@ -2,8 +2,7 @@
 #define UTILS_H
 
  #include "map.h"
-#define SO_WIDTH 6
-#define SO_HEIGHT 6
+
 #define TEST_ERROR                                                      \
   if (errno)                                                            \
   {                                                                     \
