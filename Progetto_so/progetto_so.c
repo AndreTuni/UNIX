@@ -13,8 +13,8 @@
 #include <time.h>
 #include <unistd.h>
 
-#define SO_WIDTH 6
-#define SO_HEIGHT 6
+#define SO_WIDTH 20
+#define SO_HEIGHT 10
 #define MAX_TAXI 100
 #define SIZE sizeof(msg) - sizeof(long)
 #define TEST_ERROR                                                      \

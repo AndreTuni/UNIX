@@ -17,17 +17,13 @@
 #include "taxi.h"
 #include "utils.h"
 
-
-
-
 #define SIZE sizeof(msg) - sizeof(long)
-
 
 int parent_pid, q_id, shm_id, sem_id, sem_id_cell, child_pid, flag, segnale;
 int *taxis, *sources;
 
 int main()
- {
+{
   int i, j, status;
   sigset_t my_mask;
   struct sembuf sops;
@@ -136,6 +132,8 @@ int main()
       while (shared->sim_timeout)
       {
         cab = drive(shared, cab);
+        printf("cerco passeggeri\n");
+        print_taxi(cab);
         // destinazione raggiunta
         /*in ascolto su msgq per
            * ottenere la prosima destination*/
@@ -147,8 +145,14 @@ int main()
           }
           if (errno == EINTR)
           {
-            printf("caught signal\n");
+            //printf("caught signal\n");
+            break;
           }
+          if (errno == EINVAL)
+          {
+            break;
+          }
+
           else
           {
             TEST_ERROR;
@@ -157,15 +161,20 @@ int main()
         }
         else
         {
-          cab.position = msg.origin;
+          printf("Taxi %d legge\n", getpid());
+          print_msg(msg);
+          printf("-------------------------------------------\n");
+          //  cab.position = msg.origin;
           cab.destination = msg.dest;
 
-           printf("pid %d caricato passeggero verso = %d\n", getpid(),
-                  cab.destination.id);
+          printf("pid %d caricato passeggero verso = %d\n", getpid(),
+                 cab.destination.id);
           shared->s.n_viaggi++;
           shared->s.evasi++;
-          cab=drive(shared, cab);
-
+          cab = drive(shared, cab);
+          printf("PACCO CONSEGNATO\n");
+          cab.destination = get_random_source(shared->m);
+          print_taxi(cab);
           cab.stats.clienti[1] = cab.stats.clienti[1] + 1;
         }
       }
@@ -211,6 +220,7 @@ int main()
           ------------------------------------------------------------------------------*/
       while (shared->sim_timeout)
       {
+        nanosleep((const struct timespec[]){{0, 800000000L}}, NULL);
         msg = msg_gen(shared->m, s);
 
         if (msgsnd(q_id, &msg, SIZE, 0) < 0)
@@ -226,8 +236,8 @@ int main()
             TEST_ERROR;
           }
         }
+        //  printf("%d ha generato la richiesta\n", getpid());
       }
-      //  printf("FINE REQUEST\n");
 
       wait_for_zero(sem_id, 3);
 
@@ -288,9 +298,7 @@ int main()
         // print_taxi(cab);
         sem_release(sem_id, 2);
         /*fine inizializzazione taxi*/
-        /*------------------------------------------------------------------------------
-                    INIZIO SIMULAZIONE
-            ------------------------------------------------------------------------------*/
+
         while (shared->sim_timeout)
         {
           printf("INIZIO WHILE NUOVI TAXI\n");
@@ -318,8 +326,7 @@ int main()
             cab.position = msg.origin;
             cab.destination = msg.dest;
 
-
-              printf("pid %d caricato passeggero verso = %d\n", getpid(),
+            printf("pid %d caricato passeggero verso = %d\n", getpid(),
                    cab.destination.id);
             shared->s.n_viaggi++;
             cab = drive(shared, cab);

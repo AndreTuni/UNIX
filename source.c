@@ -25,7 +25,7 @@ message msg_gen(map my_map, cell s)
   msg.mtype = s.id;
   msg.created_by = getpid();
   msg.origin = s;
-  msg.dest = get_random_cell(my_map);
+  msg.dest = get_dest(my_map, s);
   return msg;
 }
 
@@ -43,12 +43,13 @@ cell get_dest(map my_map, cell pos)
 {
   int i = 0;
   cell dest;
-  while(i < 1)
+  while (i < 1)
   {
     dest = get_random_cell(my_map);
-    if(pos.id != dest.id)
+    if (pos.id != dest.id)
     {
       i++;
     }
   }
+  return dest;
 }

@@ -18,7 +18,6 @@
 #include "utils.h"
 /*----------------------------------------------------------------------------*/
 
-
 /*----------------------------------------------------------------------------*/
 
 void print_map(map my_map)
@@ -40,8 +39,6 @@ void print_map(map my_map)
 }
 
 /*----------------------------------------------------------------------------*/
-
-
 
 /*----------------------------------------------------------------------------*/
 
@@ -124,6 +121,22 @@ cell get_random_source(map my_map)
     x = random_extraction(0, SO_WIDTH - 1);
     y = random_extraction(0, SO_HEIGHT - 1);
     if (my_map.city[x][y].type == 2)
+    {
+      i++;
+    }
+  }
+  return my_map.city[x][y];
+}
+/*----------------------------------------------------------------------------*/
+cell get_hole(map my_map)
+{
+  int i, x, y;
+  i = 0;
+  while (i < 1)
+  {
+    x = random_extraction(0, SO_WIDTH - 1);
+    y = random_extraction(0, SO_HEIGHT - 1);
+    if (my_map.city[x][y].type == 0)
     {
       i++;
     }

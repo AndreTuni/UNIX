@@ -17,10 +17,8 @@
 #include "taxi.h"
 #include "utils.h"
 
-
 /*----------------------------------------------------------------------------*/
 int shm_id, parent_pid, q_id, sem_id, sem_id_cell;
-
 
 int *taxis, *sources;
 
@@ -113,7 +111,6 @@ void signal_handler(int sig)
   }
 }
 
-
 /*----------------------------------------------------------------------------*/
 
 void print_stats(shared_data *shared, settings rules)
@@ -144,7 +141,7 @@ map map_gen(settings rules, struct sembuf sops)
 {
   int i, j, x, y, id, c, k;
   map new_map;
-  int max_holes = SO_WIDTH * SO_HEIGHT / 9;
+  int max_holes = (SO_WIDTH * SO_HEIGHT) / 9;
   if (rules.SO_HOLES > max_holes)
   {
     printf(
@@ -227,7 +224,6 @@ cell get_new_source(shared_data *shared)
   return s;
 }
 
-
 /*----------------------------------------------------------------------------*/
 
 int random_extraction(int a, int b)
@@ -244,19 +240,18 @@ int random_extraction(int a, int b)
   return r;
 }
 
-
 /*----------------------------------------------------------------------------*/
 
 /* Release the resource */
 int sem_release(int sem_id, int sem_num)
 {
   struct sembuf sops;
-  printf("pid %d releases su %d \n", getpid(), sem_num + 1);
+  printf("pid %d releasing su %d \n", getpid(), sem_num + 1);
   sops.sem_num = sem_num;
   sops.sem_op = 1;
   sops.sem_flg = 0;
-
-  return semop(sem_id, &sops, 1);
+  semop(sem_id, &sops, 1);
+  printf("pid %d RELEASED su %d \n", getpid(), sem_num + 1);
 }
 
 /*----------------------------------------------------------------------------*/
@@ -264,7 +259,7 @@ int sem_release(int sem_id, int sem_num)
 int sem_reserve(int sem_id, int sem_num)
 {
   struct sembuf sops;
-   printf("pid %d waiting on sem %d\n", getpid(), sem_num);
+  printf("pid %d waiting on sem %d\n", getpid(), sem_num);
 
   sops.sem_num = sem_num;
   sops.sem_op = -1;
@@ -291,7 +286,7 @@ int sem_reserve_sim(int sem_id, int sem_num)
     {
       printf(" pid %d exit 129\n", getpid());
 
-      exit(129);
+      exit(0);
     }
     else
     {
@@ -300,7 +295,6 @@ int sem_reserve_sim(int sem_id, int sem_num)
   }
   return r;
 }
-
 
 /*----------------------------------------------------------------------------*/
 int wait_for_zero(int sem_id, int sem_num)
