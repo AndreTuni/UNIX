@@ -10,6 +10,7 @@
 typedef struct
 {
   int id;
+  //cell previous;
   cell position;
   cell destination;
   int queue_id;

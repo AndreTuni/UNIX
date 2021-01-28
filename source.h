@@ -17,6 +17,7 @@ typedef struct
   /*functions*/
   message msg_gen(map my_map, cell s);
   void print_msg(message msg);
+  cell get_dest(map my_map, cell pos);
 
 
 #endif

@@ -135,10 +135,11 @@ int main()
           ------------------------------------------------------------------------------*/
       while (shared->sim_timeout)
       {
+        cab = drive(shared, cab);
         // destinazione raggiunta
         /*in ascolto su msgq per
            * ottenere la prosima destination*/
-        if (msgrcv(q_id, &msg, SIZE, 0, 0) < 0)
+        if (msgrcv(q_id, &msg, SIZE, cab.position.id, 0) < 0)
         {
           if (errno == ENOMSG)
           {
@@ -156,15 +157,14 @@ int main()
         }
         else
         {
-          cab.destination = msg.origin;
-          drive(shared, cab);
+          cab.position = msg.origin;
           cab.destination = msg.dest;
 
-          // printf("pid %d caricato passeggero verso = %d\n", getpid(),
-          //        cab.destination.id);
+           printf("pid %d caricato passeggero verso = %d\n", getpid(),
+                  cab.destination.id);
           shared->s.n_viaggi++;
           shared->s.evasi++;
-          drive(shared, cab);
+          cab=drive(shared, cab);
 
           cab.stats.clienti[1] = cab.stats.clienti[1] + 1;
         }
@@ -297,7 +297,7 @@ int main()
 
           /*in ascolto su msgq per
              * ottenere la prosima destination*/
-          if (msgrcv(q_id, &msg, SIZE, 0, 0) < 0)
+          if (msgrcv(q_id, &msg, SIZE, cab.position.id, 0) < 0)
           {
             if (errno == ENOMSG)
             {
@@ -315,14 +315,14 @@ int main()
           }
           else
           {
-            cab.destination = msg.origin;
-            drive(shared, cab);
+            cab.position = msg.origin;
             cab.destination = msg.dest;
 
-            //  printf("pid %d caricato passeggero verso = %d\n", getpid(),
-            //       cab.destination.id);
+
+              printf("pid %d caricato passeggero verso = %d\n", getpid(),
+                   cab.destination.id);
             shared->s.n_viaggi++;
-            drive(shared, cab);
+            cab = drive(shared, cab);
             shared->s.evasi++;
             cab.stats.clienti[1] = cab.stats.clienti[1] + 1;
           }

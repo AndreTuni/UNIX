@@ -38,3 +38,17 @@ void print_msg(message msg)
   printf("origin = %d\n", msg.origin.id);
   printf("destination id = %d\n", msg.dest.id);
 }
+
+cell get_dest(map my_map, cell pos)
+{
+  int i = 0;
+  cell dest;
+  while(i < 1)
+  {
+    dest = get_random_cell(my_map);
+    if(pos.id != dest.id)
+    {
+      i++;
+    }
+  }
+}
