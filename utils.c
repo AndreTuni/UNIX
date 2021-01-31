@@ -17,11 +17,14 @@
 #include "taxi.h"
 #include "utils.h"
 
-/*----------------------------------------------------------------------------*/
 int shm_id, parent_pid, q_id, sem_id, sem_id_cell;
-
 int *taxis, *sources;
 
+/**
+ * function to read and set the rules of the simulation
+ * @param a1: struct of settings named rules
+ * @return : rules of the simulation
+ */
 settings cfg(settings rules)
 {
   FILE *config;
@@ -46,8 +49,10 @@ settings cfg(settings rules)
   return rules;
 }
 
-/*----------------------------------------------------------------------------*/
-
+/**
+ * function to handle the different signal errors
+ * @param a1: struct of settings named rules
+ */
 void signal_handler(int sig)
 {
   int i, j;
@@ -61,7 +66,6 @@ void signal_handler(int sig)
     if (getpid() == parent_pid)
     {
       shared->sim_timeout = 0;
-
       for (i = 0; i < rules.SO_TAXI; i++)
       {
         if (kill(taxis[i], SIGUSR1) < 0)
@@ -89,7 +93,6 @@ void signal_handler(int sig)
         }
       }
     }
-
     break;
   case SIGINT:
     if (getpid() == parent_pid)
@@ -111,17 +114,20 @@ void signal_handler(int sig)
   }
 }
 
-/*----------------------------------------------------------------------------*/
-
+/**
+ * function to print the simulation statistics about the 
+ * @param a1: pointer to shared_data struct 
+ * @param a2: rules of the simulation
+ */
 void print_stats(shared_data *shared, settings rules)
 {
   int i, j;
+
   printf("******************************************************\n");
   printf("statistiche sui viaggi\n");
   printf("numero viaggi completati %d\n", shared->s.v_comp);
   printf("numero viaggi annullati %d\n", shared->s.v_abort);
-  printf("numero viaggi evasi %d\n", shared->s.evasi);
-
+  printf("numero viaggi inevasi %ld\n", shared->s.inevasi);
   printf("SO_SOURCES\n");
   for (i = 0; i < SO_HEIGHT; i++)
   {
@@ -135,8 +141,12 @@ void print_stats(shared_data *shared, settings rules)
   }
 }
 
-/*----------------------------------------------------------------------------*/
-
+/**
+ * function to generate the map 
+ * @param a1: struct of settings named rules
+ * @param a2: semaphore struct
+ * @return : the new map generated
+ */
 map map_gen(settings rules, struct sembuf sops)
 {
   int i, j, x, y, id, c, k;
@@ -187,27 +197,36 @@ map map_gen(settings rules, struct sembuf sops)
   return new_map;
 }
 
-/*----------------------------------------------------------------------------*/
-
+/**
+ * function to configure the cell following the rules
+ * @param a1: struct of settings named rules
+ * @param a2: abscissa x on the map
+ * @param a3: ordinate y on the map
+ * @param a4: id of the cell
+ * @param a5: semaphore struct
+ * @return : the new cell configurated 
+ */
 cell cell_gen(settings rules, int x, int y, int id, struct sembuf sops)
 {
   cell new_cell;
   new_cell.id = id;
   new_cell.x = x;
   new_cell.y = y;
-  new_cell.t_attr =
-      random_extraction(rules.SO_TIMENSEC_MIN, rules.SO_TIMENSEC_MAX);
+  new_cell.t_attr = random_extraction(rules.SO_TIMENSEC_MIN, rules.SO_TIMENSEC_MAX);
   new_cell.cap = random_extraction(rules.SO_CAP_MIN, rules.SO_CAP_MAX);
   new_cell.type = 1; // definito dopo
   new_cell.here = 0;
   new_cell.n_attr = 0;
   semctl(sem_id_cell, id - 1, SETVAL, new_cell.cap);
-
   new_cell.sem_id = sem_id_cell;
   return new_cell;
 }
 
-/*----------------------------------------------------------------------------*/
+/**
+ * function to configure the source cells
+ * @param a1: pointer to shared_data struct
+ * @return : the source cell s
+ */
 cell get_new_source(shared_data *shared)
 {
   cell s;
@@ -224,8 +243,12 @@ cell get_new_source(shared_data *shared)
   return s;
 }
 
-/*----------------------------------------------------------------------------*/
-
+/**
+ * function to calculate a random number r
+ * @param a1: a
+ * @param a2: b
+ * @return : the r number
+ */
 int random_extraction(int a, int b)
 {
   int r;
@@ -240,26 +263,31 @@ int random_extraction(int a, int b)
   return r;
 }
 
-/*----------------------------------------------------------------------------*/
-
-/* Release the resource */
+/**
+ * function to release the semaphore
+ * @param a1: semaphore id
+ * @param a2: semaphore number
+ */
 int sem_release(int sem_id, int sem_num)
 {
   struct sembuf sops;
-  printf("pid %d releasing su %d \n", getpid(), sem_num + 1);
+  //printf("pid %d releasing su %d \n", getpid(), sem_num + 1);
   sops.sem_num = sem_num;
   sops.sem_op = 1;
   sops.sem_flg = 0;
   semop(sem_id, &sops, 1);
-  printf("pid %d RELEASED su %d \n", getpid(), sem_num + 1);
+  //printf("pid %d RELEASED su %d \n", getpid(), sem_num + 1);
 }
 
-/*----------------------------------------------------------------------------*/
-/* Try to access the resource */
+/**
+ * function to try the access to the semaphore
+ * @param a1: semaphore id
+ * @param a2: semaphore number
+ */
 int sem_reserve(int sem_id, int sem_num)
 {
   struct sembuf sops;
-  printf("pid %d waiting on sem %d\n", getpid(), sem_num);
+  // printf("pid %d waiting on sem %d\n", getpid(), sem_num);
 
   sops.sem_num = sem_num;
   sops.sem_op = -1;
@@ -267,8 +295,11 @@ int sem_reserve(int sem_id, int sem_num)
   return semop(sem_id, &sops, 1);
 }
 
-/*----------------------------------------------------------------------------*/
-
+/**
+ * function to test the access to the semaphore
+ * @param a1: semaphore id
+ * @param a2: semaphore number
+ */
 int sem_reserve_sim(int sem_id, int sem_num)
 {
   struct sembuf sops;
@@ -286,7 +317,7 @@ int sem_reserve_sim(int sem_id, int sem_num)
     {
       printf(" pid %d exit 129\n", getpid());
 
-      exit(0);
+      exit(129);
     }
     else
     {
@@ -296,15 +327,18 @@ int sem_reserve_sim(int sem_id, int sem_num)
   return r;
 }
 
-/*----------------------------------------------------------------------------*/
+/**
+ * function to wait the zero of the semaphore
+ * @param a1: semaphore id
+ * @param a2: semaphore number
+ */
 int wait_for_zero(int sem_id, int sem_num)
 {
   struct sembuf sops;
   sops.sem_num = sem_num;
   sops.sem_op = -1;
   semop(sem_id, &sops, 1);
-
   sops.sem_op = 0;
   return semop(sem_id, &sops, 1);
 }
-/*----------------------------------------------------------------------------*/
+

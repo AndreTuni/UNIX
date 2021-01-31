@@ -18,30 +18,70 @@
 #include "utils.h"
 /*----------------------------------------------------------------------------*/
 
-/*----------------------------------------------------------------------------*/
 
+/**
+ * function to print the map
+ * @param a1: struct of map
+ */
 void print_map(map my_map)
 {
   int i, j;
-  printf("******************************************************\n");
-  printf("|  ID  |  X  |  Y  |   DURATA      | ");
-  printf("CAP | TIPO | TAXI \n");
-  for (i = 0; i < SO_WIDTH; i++)
+  for (i = 0; i < SO_HEIGHT; i++)
   {
-    for (j = 0; j < SO_HEIGHT; j++)
+    for (j = 0; j < SO_WIDTH; j++)
     {
-      printf("|  %d   |  %d  |  %d  |  %d    | %d   |  %d   | %d\n",
-             my_map.city[i][j].id, my_map.city[i][j].x, my_map.city[i][j].y,
-             my_map.city[i][j].t_attr, my_map.city[i][j].cap,
-             my_map.city[i][j].type, my_map.city[i][j].here);
+      printf(" ------------");
     }
+    putchar('\n');
+    for (j = 0; j < SO_WIDTH; j++)
+    {
+      if (my_map.city[i][j].id <= 9)
+      {
+        printf("|%d          %d", my_map.city[i][j].id, my_map.city[i][j].type);
+      }
+      else if (my_map.city[i][j].id <= 99)
+      {
+        printf("|%d         %d", my_map.city[i][j].id, my_map.city[i][j].type);
+      }
+      else if (my_map.city[i][j].id <= 999)
+      {
+        printf("|%d        %d", my_map.city[i][j].id, my_map.city[i][j].type);
+      }
+      else
+      {
+        printf("|%d        %d", my_map.city[i][j].id, my_map.city[i][j].type);
+      }
+    }
+    printf("|\n");
+    for (j = 0; j < SO_WIDTH; j++)
+    {
+      printf("|            ");
+    }
+    printf("|\n");
+    for (j = 0; j < SO_WIDTH; j++)
+    {
+      printf("|      %d     ", my_map.city[i][j].here);
+    }
+    printf("|\n");
+    for (j = 0; j < SO_WIDTH; j++)
+    {
+      printf("|           %d", my_map.city[i][j].cap);
+    }
+    printf("|\n");
   }
+  for (j = 0; j < SO_WIDTH; j++)
+  {
+    printf(" ------------");
+  }
+  putchar('\n');
 }
 
-/*----------------------------------------------------------------------------*/
 
-/*----------------------------------------------------------------------------*/
 
+/**
+ * function to create a hole in the map
+ * @param a1: cell
+ */
 cell hole_gen(cell cella)
 {
   cella.t_attr = 999999999;
@@ -50,6 +90,10 @@ cell hole_gen(cell cella)
   return cella;
 }
 
+/**
+ * function to create a source in the map
+ * @param a1: cell
+ */
 cell source_gen(cell cella)
 {
   cella.type = 2;
@@ -57,8 +101,14 @@ cell source_gen(cell cella)
   return cella;
 }
 
-/*----------------------------------------------------------------------------*/
-
+/**
+ * function to check the close cells
+ * @param a1:struct of map
+ * @param a2:cell
+ * @param a3:abscissa x
+ * @param a4:ordinate y
+ * @return:r
+ */
 int check_neighbours(map this_map, cell cella, int x, int y)
 {
   int r = -1;
@@ -75,8 +125,11 @@ int check_neighbours(map this_map, cell cella, int x, int y)
   return r;
 }
 
-/*----------------------------------------------------------------------------*/
-
+/**
+ * function to get a random cell position
+ * @param a1:struct of map
+ * @return: cell's coordinates
+ */
 cell get_random_cell(map my_map)
 {
   int i, x, y;
@@ -93,8 +146,11 @@ cell get_random_cell(map my_map)
   return my_map.city[x][y];
 }
 
-/*----------------------------------------------------------------------------*/
-
+/**
+ * function to get a valid source cell position
+ * @param a1:struct of map
+ * @return: source cell
+ */
 cell get_valid_source(map my_map)
 {
   cell s;
@@ -110,8 +166,11 @@ cell get_valid_source(map my_map)
   return s;
 }
 
-/*----------------------------------------------------------------------------*/
-
+/**
+ * function to get a random source cell position
+ * @param a1:struct of map
+ * @return: source's cell position
+ */
 cell get_random_source(map my_map)
 {
   int i, x, y;
@@ -127,7 +186,12 @@ cell get_random_source(map my_map)
   }
   return my_map.city[x][y];
 }
-/*----------------------------------------------------------------------------*/
+
+/**
+ * function to get a hole cell position
+ * @param a1:struct of map
+ * @return: hole's cell position
+ */
 cell get_hole(map my_map)
 {
   int i, x, y;
