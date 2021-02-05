@@ -13,10 +13,27 @@ typedef struct
   cell previous;
   cell position;
   cell destination;
+  int status;
   int queue_id;
   int time_out;
   taxi_stat stats;
 } taxi;
+
+/**
+ * Feedback struct
+ */
+typedef struct
+{
+  long mtype;
+  taxi_stat new_stats;
+} feedback;
+
+/**
+ * function that create the message to send in message queue
+ * @param a1: struct of taxi
+ * @return : feed
+ */
+feedback feed_gen(taxi t);
 
 /**
  * function to position the taxi on the cell
@@ -33,14 +50,14 @@ cell set_taxi(shared_data *shared);
 taxi taxi_gen(shared_data *shared);
 
 /**
- * function to print all the taxi's statistics 
+ * function to print all the taxi's statistics
  * @param a1: taxi
  */
 void print_taxi(taxi t);
 
 /**
  * function to calculate the manhattan distance between two coordinates
- * @param a1: starter abscissa a 
+ * @param a1: starter abscissa a
  * @param a2: starter ordinate b
  * @param a3: destination abscissa x
  * @param a4: destination ordinate y
@@ -51,7 +68,7 @@ int manhattan(int a, int b, int x, int y);
  * function to drive the taxi on the map
  * @param a1: pointer to shared_data struct
  * @param a2: taxi
- * @return : the taxi in the final position 
+ * @return : the taxi in the final position
  */
 taxi drive(shared_data *shared, taxi t);
 
@@ -90,5 +107,19 @@ cell go_left(shared_data *shared, cell position, taxi t);
  * @return : next cell position of the taxi
  */
 cell go_right(shared_data *shared, cell position, taxi t);
+
+/**
+ * function to execute the simulation of taxi on the map
+ * @param a1: pointer to shared_data memory 
+ * @param a2: struct of taxi named cab
+ */
+void taxi_simulation(shared_data *shared, taxi cab);
+
+/**
+ * function to in initialize the taxi before the simulation starts
+ * @param a1: pointer to shared_data memory 
+ * @return : cab
+ */
+taxi init_taxi(shared_data *shared);
 
 #endif

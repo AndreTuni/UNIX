@@ -16,10 +16,9 @@
 #include "source.h"
 #include "taxi.h"
 #include "utils.h"
+#define FEED sizeof(f) - sizeof(long)
 
-/*----------------------------------------------------------------------------*/
-
-int sem_id, sem_id_cell;
+int sem_id, sem_id_cell, q_id, q_id_t;
 
 /**
  * function to position the taxi on the cell
@@ -30,15 +29,30 @@ cell set_taxi(shared_data *shared)
 {
   int i = 0;
   cell pos;
+  struct sembuf sops;
   while (i < 1)
   {
     pos = get_random_cell(shared->m);
-    if (shared->m.city[pos.x][pos.y].here < shared->m.city[pos.x][pos.y].cap)
+    sops.sem_flg = IPC_NOWAIT;
+    sops.sem_num = pos.id - 1;
+    sops.sem_op = -1;
+    if (semop(sem_id_cell, &sops, 1) < 0)
     {
-      sem_reserve(sem_id, 4);
+      if (errno == EAGAIN)
+      {
+      }
+      else
+      {
+        TEST_ERROR;
+        break;
+      }
+    }
+    else
+    {
+      sem_reserve(sem_id, 1);
       shared->m.city[pos.x][pos.y].here++;
-      sem_release(sem_id, 4);
       i++;
+      sem_release(sem_id, 1);
     }
   }
   return pos;
@@ -56,6 +70,7 @@ taxi taxi_gen(shared_data *shared)
   cab.previous = get_hole(shared->m);
   cab.position = set_taxi(shared);
   cab.destination = get_valid_source(shared->m);
+  cab.status = 0;
   cab.stats.km[0] = cab.id;
   cab.stats.km[1] = 0;
   cab.stats.tempo[0] = cab.id;
@@ -66,7 +81,7 @@ taxi taxi_gen(shared_data *shared)
 }
 
 /**
- * function to print all the taxi's statistics 
+ * function to print all the taxi's statistics
  * @param a1: taxi
  */
 void print_taxi(taxi t)
@@ -76,14 +91,11 @@ void print_taxi(taxi t)
   printf("previous id = %d\n", t.previous.id);
   printf("position id = %d\n", t.position.id);
   printf("destination id = %d\n", t.destination.id);
-  //  printf("percorsi = %d celle\n", t.stats.km[1]);
-  // printf("trascorsi = %d nanosecondi\n", t.stats.tempo[1]);
-  // printf("trasportati = %d clienti\n", t.stats.clienti[1]);
 }
 
 /**
  * function to calculate the manhattan distance between two coordinates
- * @param a1: starter abscissa a 
+ * @param a1: starter abscissa a
  * @param a2: starter ordinate b
  * @param a3: destination abscissa x
  * @param a4: destination ordinate y
@@ -100,19 +112,10 @@ int manhattan(int a, int b, int x, int y) { return abs(a - b) + abs(x - y); }
 cell go_up(shared_data *shared, cell position, taxi t)
 {
   cell next_pos;
-  printf(" %d Going up\n", getpid());
-  sem_reserve(sem_id, 4);
   shared->m.city[t.position.x][t.position.y].here--;
-  printf(" %d here--\n", shared->m.city[t.position.x][t.position.y].id);
-  sem_release(sem_id, 4);
   next_pos = shared->m.city[position.x - 1][position.y];
-  sem_reserve(sem_id, 4);
+  shared->m.city[position.x][position.y].n_attr++;
   shared->m.city[next_pos.x][next_pos.y].here++;
-  printf(" %d here++\n", shared->m.city[next_pos.x][next_pos.y].id);
-  sem_release(sem_id, 4);
-  //shared->m.city[position.x - 1][position.y].n_attr++;
-  // t.stats.km[1]++;
-  // t.stats.tempo[1] = t.stats.tempo[1] + next_pos.t_attr;
   my_time.tv_sec = 0;
   my_time.tv_nsec = next_pos.t_attr;
   nanosleep(&my_time, NULL);
@@ -129,19 +132,10 @@ cell go_up(shared_data *shared, cell position, taxi t)
 cell go_down(shared_data *shared, cell position, taxi t)
 {
   cell next_pos;
-  printf(" %d Going down\n", getpid());
-  sem_reserve(sem_id, 4);
   shared->m.city[t.position.x][t.position.y].here--;
-  printf(" %d here--\n", shared->m.city[t.position.x][t.position.y].id);
-  sem_release(sem_id, 4);
   next_pos = shared->m.city[position.x + 1][position.y];
-  sem_reserve(sem_id, 4);
+  shared->m.city[position.x][position.y].n_attr++;
   shared->m.city[next_pos.x][next_pos.y].here++;
-  printf(" %d here++\n", shared->m.city[next_pos.x][next_pos.y].id);
-  sem_release(sem_id, 4);
-  //shared->m.city[position.x + 1][position.y].n_attr++;
-  // t.stats.km[1]++;
-  // t.stats.tempo[1] = t.stats.tempo[1] + next_pos.t_attr;
   my_time.tv_sec = 0;
   my_time.tv_nsec = next_pos.t_attr;
   nanosleep(&my_time, NULL);
@@ -158,19 +152,10 @@ cell go_down(shared_data *shared, cell position, taxi t)
 cell go_left(shared_data *shared, cell position, taxi t)
 {
   cell next_pos;
-  printf(" %d Going left\n", getpid());
-  sem_reserve(sem_id, 4);
   shared->m.city[t.position.x][t.position.y].here--;
-  printf(" %d here--\n", shared->m.city[t.position.x][t.position.y].id);
-  sem_release(sem_id, 4);
   next_pos = shared->m.city[position.x][position.y - 1];
-  sem_reserve(sem_id, 4);
+  shared->m.city[position.x][position.y].n_attr++;
   shared->m.city[next_pos.x][next_pos.y].here++;
-  printf(" %d here++\n", shared->m.city[next_pos.x][next_pos.y].id);
-  sem_release(sem_id, 4);
-  // shared->m.city[position.x][position.y - 1].n_attr++;
-  // t.stats.km[1]++;
-  // t.stats.tempo[1] = t.stats.tempo[1] + next_pos.t_attr;
   my_time.tv_sec = 0;
   my_time.tv_nsec = next_pos.t_attr;
   nanosleep(&my_time, NULL);
@@ -187,19 +172,10 @@ cell go_left(shared_data *shared, cell position, taxi t)
 cell go_right(shared_data *shared, cell position, taxi t)
 {
   cell next_pos;
-  printf(" %d Going right\n", getpid());
-  sem_reserve(sem_id, 4);
   shared->m.city[t.position.x][t.position.y].here--;
-  printf(" %d here--\n", shared->m.city[t.position.x][t.position.y].id);
-  sem_release(sem_id, 4);
   next_pos = shared->m.city[position.x][position.y + 1];
-  sem_reserve(sem_id, 4);
+  shared->m.city[position.x][position.y].n_attr++;
   shared->m.city[next_pos.x][next_pos.y].here++;
-  printf(" %d here++\n", shared->m.city[next_pos.x][next_pos.y].id);
-  sem_release(sem_id, 4);
-  //shared->m.city[position.x][position.y + 1].n_attr++;
-  //t.stats.km[1]++;
-  //t.stats.tempo[1] = t.stats.tempo[1] + next_pos.t_attr;
   my_time.tv_sec = 0;
   my_time.tv_nsec = next_pos.t_attr;
   nanosleep(&my_time, NULL);
@@ -210,30 +186,21 @@ cell go_right(shared_data *shared, cell position, taxi t)
  * function to drive the taxi on the map
  * @param a1: pointer to shared_data struct
  * @param a2: taxi
- * @return : the taxi in the final position 
+ * @return : the taxi in the final position
  */
 taxi drive(shared_data *shared, taxi t)
 {
   int j, u, d, l, r, tmp, age = 0;
   int i = 0;
-
   struct sembuf sops;
-
   settings rules;
   rules = cfg(rules);
   while (shared->sim_timeout)
   {
-    printf("taxi driving\n");
-    // print_taxi(t);
     if (t.position.id == t.destination.id)
     {
-      printf("PID: %d DESTINATION REACHED at cell %d\n", t.id,
-             t.position.id);
-
       shared->s.v_comp++;
-
       t.previous = get_hole(shared->m);
-      // r = 1;
       break;
     }
     else
@@ -252,9 +219,7 @@ taxi drive(shared_data *shared, taxi t)
       int right = manhattan(t.position.x, t.destination.x, t.position.y + 1,
                             t.destination.y) -
                   age;
-
       tmp = t.position.id - 1;
-
       if (shared->m.city[t.position.x - 1][t.position.y].type != 0 &&
           shared->m.city[t.position.x - 1][t.position.y].id != t.previous.id)
       {
@@ -262,109 +227,223 @@ taxi drive(shared_data *shared, taxi t)
       }
       else
       {
-        printf("Stuck u\n");
         u = 0;
       }
       if (shared->m.city[t.position.x + 1][t.position.y].type != 0 &&
           shared->m.city[t.position.x + 1][t.position.y].id != t.previous.id)
       {
-        printf("down cell id %d type %d  previous id %d\n", shared->m.city[t.position.x + 1][t.position.y].id, shared->m.city[t.position.x][t.position.y - 1].type, t.previous.id);
-
         d = 1;
       }
       else
       {
-        printf("Stuck d\n");
         d = 0;
       }
       if (shared->m.city[t.position.x][t.position.y - 1].type != 0 &&
           shared->m.city[t.position.x][t.position.y - 1].id != t.previous.id)
       {
-        printf("left cell id %d type %d  previous id %d\n", shared->m.city[t.position.x][t.position.y - 1].id, shared->m.city[t.position.x][t.position.y - 1].type, t.previous.id);
         l = 1;
       }
       else
       {
-        printf("Stuck l\n");
         l = 0;
       }
       if (shared->m.city[t.position.x][t.position.y + 1].type != 0 &&
           shared->m.city[t.position.x][t.position.y + 1].id != t.previous.id)
       {
-        printf("right cell id %d type %d  previous id %d\n", shared->m.city[t.position.x][t.position.y + 1].id, shared->m.city[t.position.x][t.position.y - 1].type, t.previous.id);
-
         r = 1;
       }
       else
       {
-        printf("Stuck r\n");
         r = 0;
       }
-
-      // printf("pid %d sta guidando...\n", getpid());
-
       if (up >= 0 && up <= current && u)
       {
         age = 0;
+        sem_reserve(sem_id, 1);
         alarm(shared->taxi_timeout);
-        sem_reserve_sim(sem_id_cell, tmp);
+        sem_release(sem_id_cell, tmp);
+        sem_reserve_sim(sem_id_cell, t.position.id - 1);
+        sem_release(sem_id, 1);
         alarm(0);
-
         t.previous = t.position;
         t.position = go_up(shared, t.position, t);
-        sem_release(sem_id_cell, tmp);
+        t.stats.km[1] += 1;
+        if (t.status == 1)
+        {
+          t.stats.tempo[1] += shared->m.city[t.position.x][t.position.y].t_attr;
+        }
       }
-
       else if (down >= 0 && down <= current && d)
       {
         age = 0;
+        sem_reserve(sem_id, 1);
         alarm(shared->taxi_timeout);
-        sem_reserve_sim(sem_id_cell, tmp);
+        sem_release(sem_id_cell, tmp);
+        sem_reserve_sim(sem_id_cell, t.position.id - 1);
+        sem_release(sem_id, 1);
         alarm(0);
-
         t.previous = t.position;
         t.position = go_down(shared, t.position, t);
-        sem_release(sem_id_cell, tmp);
+        t.stats.km[1] += 1;
+        if (t.status == 1)
+        {
+          t.stats.tempo[1] += shared->m.city[t.position.x][t.position.y].t_attr;
+        }
       }
-
       else if (left >= 0 && left <= current && l)
       {
         age = 0;
+        sem_reserve(sem_id, 1);
         alarm(shared->taxi_timeout);
-        sem_reserve_sim(sem_id_cell, tmp);
+        sem_release(sem_id_cell, tmp);
+        sem_reserve_sim(sem_id_cell, t.position.id - 1);
+        sem_release(sem_id, 1);
         alarm(0);
-
         t.previous = t.position;
         t.position = go_left(shared, t.position, t);
-        sem_release(sem_id_cell, tmp);
-        ;
+        t.stats.km[1] += 1;
+        if (t.status == 1)
+        {
+          t.stats.tempo[1] += shared->m.city[t.position.x][t.position.y].t_attr;
+        }
       }
-
       else if (right >= 0 && right <= current && r)
       {
         age = 0;
+        sem_reserve(sem_id, 1);
         alarm(shared->taxi_timeout);
-        sem_reserve_sim(sem_id_cell, tmp);
+        sem_release(sem_id_cell, tmp);
+        sem_reserve_sim(sem_id_cell, t.position.id - 1);
+        sem_release(sem_id, 1);
         alarm(0);
-
         t.previous = t.position;
         t.position = go_right(shared, t.position, t);
-        sem_release(sem_id_cell, tmp);
+        t.stats.km[1] += 1;
+        if (t.status == 1)
+        {
+          t.stats.tempo[1] += shared->m.city[t.position.x][t.position.y].t_attr;
+        }
       }
-
       else
       {
         age++;
-        printf("curr %d up %d\n", current, up);
-        printf("curr %d down %d\n", current, down);
-        printf("curr %d left %d\n", current, left);
-        printf("curr %d right %d\n", current, right);
-        printf("pid %d position %d destination = %d \n", getpid(),
-               t.position.id, t.destination.id);
-        // printf("pid %d lost\n", getpid());
       }
     }
   }
-  // printf("fine  drive %d\n", getpid());
   return t;
+}
+
+/**
+ * function that create the message to send in message queue
+ * @param a1: struct of taxi
+ * @return : feed
+ */
+feedback feed_gen(taxi t)
+{
+  feedback feed;
+  feed.mtype = getpid();
+  feed.new_stats.km[0] = t.stats.km[0];
+  feed.new_stats.km[1] = t.stats.km[1];
+  feed.new_stats.tempo[0] = t.stats.tempo[0];
+  feed.new_stats.tempo[1] = t.stats.tempo[1];
+  feed.new_stats.clienti[0] = t.stats.clienti[0];
+  feed.new_stats.clienti[1] = t.stats.clienti[1];
+  return feed;
+}
+
+/**
+ * function to in initialize the taxi before the simulation starts
+ * @param a1: pointer to shared_data memory 
+ * @return : cab
+ */
+taxi init_taxi(shared_data *shared)
+{
+  fprintf(stderr, "CHILD PID: %d INITIALIZED AS TAXI\n", getpid());
+  struct sembuf sops;
+  struct msqid_ds msqid_ds, *buf;
+  message msg;
+  buf = &msqid_ds;
+  srand(getpid());
+  taxi cab;
+  cab = taxi_gen(shared);
+  return cab;
+}
+
+/**
+ * function to execute the simulation of taxi on the map
+ * @param a1: pointer to shared_data memory 
+ * @param a2: struct of taxi named cab
+ */
+void taxi_simulation(shared_data *shared, taxi cab)
+{
+  struct sembuf sops;
+  struct msqid_ds msqid_ds, *buf;
+  message msg;
+  buf = &msqid_ds;
+  srand(getpid());
+  while (shared->sim_timeout)
+  {
+    cab = drive(shared, cab);
+    if (msgrcv(q_id, &msg, WHISTLE, cab.position.id, 0) < 0)
+    {
+      if (errno == ENOMSG)
+      {
+      }
+      if (errno == EINTR)
+      {
+        break;
+      }
+      if (errno == EINVAL)
+      {
+        break;
+      }
+      if (errno == EIDRM)
+      {
+        break;
+      }
+      else
+      {
+        TEST_ERROR;
+        break;
+      }
+    }
+    else
+    {
+      cab.destination = msg.dest;
+      cab.status = 1;
+      shared->s.n_viaggi++;
+      cab = drive(shared, cab);
+      if (cab.destination.type != 2)
+      {
+        cab.destination = get_random_source(shared->m);
+        cab.status = 0;
+      }
+      cab.stats.clienti[1] += 1;
+      feedback f;
+      f = feed_gen(cab);
+      if (msgsnd(q_id_t, &f, FEED, 0) < 0)
+      {
+        if (errno == EINTR)
+        {
+          break;
+        }
+        if (errno == EIDRM)
+        {
+          break;
+        }
+        if (errno == EINVAL)
+        {
+          break;
+        }
+        else
+        {
+          TEST_ERROR;
+        }
+      }
+      else
+      {
+        cab.stats.tempo[1] = 0;
+      }
+    }
+  }
 }

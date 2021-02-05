@@ -16,8 +16,6 @@
 #include "source.h"
 #include "taxi.h"
 #include "utils.h"
-/*----------------------------------------------------------------------------*/
-
 
 /**
  * function to print the map
@@ -75,8 +73,6 @@ void print_map(map my_map)
   }
   putchar('\n');
 }
-
-
 
 /**
  * function to create a hole in the map
@@ -167,27 +163,6 @@ cell get_valid_source(map my_map)
 }
 
 /**
- * function to get a random source cell position
- * @param a1:struct of map
- * @return: source's cell position
- */
-cell get_random_source(map my_map)
-{
-  int i, x, y;
-  i = 0;
-  while (i < 1)
-  {
-    x = random_extraction(0, SO_WIDTH - 1);
-    y = random_extraction(0, SO_HEIGHT - 1);
-    if (my_map.city[x][y].type == 2)
-    {
-      i++;
-    }
-  }
-  return my_map.city[x][y];
-}
-
-/**
  * function to get a hole cell position
  * @param a1:struct of map
  * @return: hole's cell position
@@ -200,11 +175,12 @@ cell get_hole(map my_map)
   {
     x = random_extraction(0, SO_WIDTH - 1);
     y = random_extraction(0, SO_HEIGHT - 1);
+    sem_reserve(sem_id, 1);
     if (my_map.city[x][y].type == 0)
     {
       i++;
     }
+    sem_release(sem_id, 1);
   }
   return my_map.city[x][y];
 }
-/*----------------------------------------------------------------------------*/

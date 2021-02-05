@@ -1,10 +1,14 @@
 #ifndef MAP_H
 #define MAP_H
 
-#define SO_WIDTH 3
-#define SO_HEIGHT 3
+#define SO_WIDTH 9
+#define SO_HEIGHT 9
 
-/*structs*/
+int sem_id;
+
+/**
+ * Struct for the cell
+ */
 typedef struct
 {
   int id;
@@ -19,6 +23,9 @@ typedef struct
   int sem_id;
 } cell;
 
+/**
+ * Struct for the map
+ */
 typedef struct
 {
   cell city[SO_WIDTH][SO_HEIGHT];
@@ -64,13 +71,6 @@ cell get_random_cell(map my_map);
  * @return: source cell
  */
 cell get_valid_source(map my_map);
-
-/**
- * function to get a random source cell position
- * @param a1:struct of map
- * @return: source's cell position
- */
-cell get_random_source(map my_map);
 
 /**
  * function to get a hole cell position

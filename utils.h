@@ -38,7 +38,7 @@ typedef struct
 typedef struct
 { /* [0] = id, [1] = statistica*/
   int km[2];
-  int tempo[2];
+  long tempo[2];
   int clienti[2];
 } taxi_stat;
 
@@ -90,6 +90,12 @@ void signal_handler(int sig);
 void print_stats(shared_data *shared, settings rules);
 
 /**
+ * function to print taxi that made the most travels 
+ * @param a1: pointer to struct taxi_stat named best
+ */
+void print_top_taxis(taxi_stat *best);
+
+/**
  * function to generate the map 
  * @param a1: struct of settings named rules
  * @param a2: semaphore struct
@@ -128,21 +134,21 @@ int random_extraction(int a, int b);
  * @param a1: semaphore id
  * @param a2: semaphore number
  */
-int sem_release(int sem_id, int sem_num);
+int sem_release(int id_sem, int sem_num);
 
 /**
  * function to try the access to the semaphore
  * @param a1: semaphore id
  * @param a2: semaphore number
  */
-int sem_reserve(int sem_id, int sem_num);
+int sem_reserve(int id_sem, int sem_num);
 
 /**
  * function to test the access to the semaphore
  * @param a1: semaphore id
  * @param a2: semaphore number
  */
-int sem_reserve_sim(int sem_id, int sem_num);
+int sem_reserve_sim(int id_sem_cell, int sem_num);
 
 /**
  * function to wait the zero of the semaphore
@@ -150,5 +156,12 @@ int sem_reserve_sim(int sem_id, int sem_num);
  * @param a2: semaphore number
  */
 int wait_for_zero(int sem_id, int sem_num);
+
+/**
+ * function to print the most crossed cells by the taxi
+ * @param a1: struct of map
+ * @param a2: struct of settings named rules
+ */
+void top_cells(map mymap, settings rules);
 
 #endif

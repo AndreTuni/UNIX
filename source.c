@@ -17,6 +17,9 @@
 #include "taxi.h"
 #include "utils.h"
 
+struct sembuf sops;
+
+int sem_id, q_id;
 /**
  * function to create a message
  * @param a1: struct of map
@@ -64,4 +67,71 @@ cell get_dest(map my_map, cell pos)
     }
   }
   return dest;
+}
+
+/**
+ * function to execute the simulation of the sources
+ * @param a1: pointer to shared_data memory 
+ */
+void source_simulation(shared_data *shared)
+{
+  fprintf(stderr, "CHILD PID: %d INITIALIZED AS SO_SOURCE\n", getpid());
+  srand(getpid());
+  cell s;
+  message msg;
+  s = get_new_source(shared);
+  sops.sem_num = 0;
+  sops.sem_op = -1;
+  semop(sem_id, &sops, 1);
+  sops.sem_op = 0;
+  semop(sem_id, &sops, 1);
+  /*------------------------------------------------------------------------------
+                               INIZIO SIMULAZIONE
+  ------------------------------------------------------------------------------*/
+  while (shared->sim_timeout)
+  {
+    nanosleep((const struct timespec[]){{1, 0L}}, NULL);
+    msg = msg_gen(shared->m, s);
+    if (msgsnd(q_id, &msg, WHISTLE, 0) < 0)
+    {
+      if (errno == EINTR)
+      {
+        break;
+      }
+      if (errno == EIDRM)
+      {
+        break;
+      }
+      if (errno == EINVAL)
+      {
+        break;
+      }
+      else
+      {
+        print_msg(msg);
+        TEST_ERROR;
+      }
+    }
+  }
+}
+
+/**
+ * function to get a random source cell position
+ * @param a1:struct of map
+ * @return: source's cell position
+ */
+cell get_random_source(map my_map)
+{
+  int i, x, y;
+  i = 0;
+  while (i < 1)
+  {
+    x = random_extraction(0, SO_WIDTH - 1);
+    y = random_extraction(0, SO_HEIGHT - 1);
+    if (my_map.city[x][y].type == 2)
+    {
+      i++;
+    }
+  }
+  return my_map.city[x][y];
 }

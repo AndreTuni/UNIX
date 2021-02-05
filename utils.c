@@ -17,7 +17,7 @@
 #include "taxi.h"
 #include "utils.h"
 
-int shm_id, parent_pid, q_id, sem_id, sem_id_cell;
+int shm_id, shm_id_s, parent_pid, master_pid, stats_handler, q_id, q_id_t, sem_id, sem_id_cell;
 int *taxis, *sources;
 
 /**
@@ -73,6 +73,9 @@ void signal_handler(int sig)
           if (errno == EINVAL)
           {
           }
+          if (errno == ESRCH)
+          {
+          }
           else
           {
             TEST_ERROR
@@ -92,13 +95,38 @@ void signal_handler(int sig)
           }
         }
       }
+      if (kill(master_pid, SIGUSR1) < 0)
+      {
+        if (errno == EINVAL)
+        {
+        }
+        else
+        {
+          TEST_ERROR;
+        }
+      }
+      if (kill(stats_handler, SIGUSR1) < 0)
+      {
+        if (errno == EINVAL)
+        {
+        }
+        else
+        {
+          TEST_ERROR;
+        }
+      }
     }
     break;
   case SIGINT:
     if (getpid() == parent_pid)
     {
       msgctl(q_id, IPC_RMID, NULL);
+      msgctl(q_id_t, IPC_RMID, NULL);
       while (shmctl(shm_id, IPC_RMID, NULL))
+      {
+        TEST_ERROR;
+      }
+      while (shmctl(shm_id_s, IPC_RMID, NULL))
       {
         TEST_ERROR;
       }
@@ -106,11 +134,8 @@ void signal_handler(int sig)
       semctl(sem_id, 0, IPC_RMID);
     }
     exit(0);
-
   case SIGUSR1:
     break;
-  case SIGUSR2:
-    TEST_ERROR;
   }
 }
 
@@ -122,16 +147,16 @@ void signal_handler(int sig)
 void print_stats(shared_data *shared, settings rules)
 {
   int i, j;
-
-  printf("******************************************************\n");
+  printf("\n******************************************************\n");
   printf("statistiche sui viaggi\n");
   printf("numero viaggi completati %d\n", shared->s.v_comp);
   printf("numero viaggi annullati %d\n", shared->s.v_abort);
   printf("numero viaggi inevasi %ld\n", shared->s.inevasi);
+  printf("******************************************************\n");
   printf("SO_SOURCES\n");
-  for (i = 0; i < SO_HEIGHT; i++)
+  for (i = 0; i < SO_WIDTH; i++)
   {
-    for (j = 0; j < SO_WIDTH; j++)
+    for (j = 0; j < SO_HEIGHT; j++)
     {
       if (shared->m.city[i][j].type == 2)
       {
@@ -142,6 +167,21 @@ void print_stats(shared_data *shared, settings rules)
 }
 
 /**
+ * function to print taxi that made the most travels 
+ * @param a1: pointer to struct taxi_stat named best
+ */
+void print_top_taxis(taxi_stat *best)
+{
+  double tmp = best->tempo[1];
+  double i = tmp / 1000000000;
+  printf("******************************************************\n");
+  printf("Migliori taxi:\n");
+  printf("Maggior numero di celle percorse: TAXI %d con %d celle\n", best->km[0], best->km[1]);
+  printf("Maggior tempo nel servire una richiesta: TAXI %ld con %f secondi\n", best->tempo[0], i);
+  printf("Maggior numero di clienti: TAXI %d con %d clienti trasportati\n", best->clienti[0], best->clienti[1]);
+}
+
+/**
  * function to generate the map 
  * @param a1: struct of settings named rules
  * @param a2: semaphore struct
@@ -149,7 +189,7 @@ void print_stats(shared_data *shared, settings rules)
  */
 map map_gen(settings rules, struct sembuf sops)
 {
-  int i, j, x, y, id, c, k;
+  int i, j, x, y, id, c, k, count, togo;
   map new_map;
   int max_holes = (SO_WIDTH * SO_HEIGHT) / 9;
   if (rules.SO_HOLES > max_holes)
@@ -157,6 +197,18 @@ map map_gen(settings rules, struct sembuf sops)
     printf(
         "**IMPOSSIBILE CREARE UNA MAPPA ADEGUATA** \n**AMPLIARE LA MAPPA O "
         "RIDURRE IL NUMERO DI SO_HOLES**\n");
+    msgctl(q_id, IPC_RMID, NULL);
+    msgctl(q_id_t, IPC_RMID, NULL);
+    while (shmctl(shm_id, IPC_RMID, NULL))
+    {
+      TEST_ERROR;
+    }
+    while (shmctl(shm_id_s, IPC_RMID, NULL))
+    {
+      TEST_ERROR;
+    }
+    semctl(sem_id_cell, 0, IPC_RMID);
+    semctl(sem_id, 0, IPC_RMID);
     exit(0);
   }
   else
@@ -171,9 +223,9 @@ map map_gen(settings rules, struct sembuf sops)
       }
     }
     k = 0;
-    while (k < rules.SO_HOLES + 1)
+    while (k < rules.SO_HOLES)
     {
-      // se la cella estratta è sui bordi della mappa non può essere hole
+      // if the extracted cell is on the border of the map can't be a hole
       x = random_extraction(1, SO_WIDTH - 2);
       y = random_extraction(1, SO_HEIGHT - 2);
       if (check_neighbours(new_map, new_map.city[x][y], x, y) == 1)
@@ -193,8 +245,8 @@ map map_gen(settings rules, struct sembuf sops)
         k++;
       }
     }
+    return new_map;
   }
-  return new_map;
 }
 
 /**
@@ -214,7 +266,7 @@ cell cell_gen(settings rules, int x, int y, int id, struct sembuf sops)
   new_cell.y = y;
   new_cell.t_attr = random_extraction(rules.SO_TIMENSEC_MIN, rules.SO_TIMENSEC_MAX);
   new_cell.cap = random_extraction(rules.SO_CAP_MIN, rules.SO_CAP_MAX);
-  new_cell.type = 1; // definito dopo
+  new_cell.type = 1;
   new_cell.here = 0;
   new_cell.n_attr = 0;
   semctl(sem_id_cell, id - 1, SETVAL, new_cell.cap);
@@ -268,15 +320,13 @@ int random_extraction(int a, int b)
  * @param a1: semaphore id
  * @param a2: semaphore number
  */
-int sem_release(int sem_id, int sem_num)
+int sem_release(int id_sem, int sem_num)
 {
   struct sembuf sops;
-  //printf("pid %d releasing su %d \n", getpid(), sem_num + 1);
   sops.sem_num = sem_num;
   sops.sem_op = 1;
   sops.sem_flg = 0;
-  semop(sem_id, &sops, 1);
-  //printf("pid %d RELEASED su %d \n", getpid(), sem_num + 1);
+  semop(id_sem, &sops, 1);
 }
 
 /**
@@ -284,15 +334,13 @@ int sem_release(int sem_id, int sem_num)
  * @param a1: semaphore id
  * @param a2: semaphore number
  */
-int sem_reserve(int sem_id, int sem_num)
+int sem_reserve(int id_sem, int sem_num)
 {
   struct sembuf sops;
-  // printf("pid %d waiting on sem %d\n", getpid(), sem_num);
-
   sops.sem_num = sem_num;
   sops.sem_op = -1;
   sops.sem_flg = 0;
-  return semop(sem_id, &sops, 1);
+  return semop(id_sem, &sops, 1);
 }
 
 /**
@@ -300,31 +348,37 @@ int sem_reserve(int sem_id, int sem_num)
  * @param a1: semaphore id
  * @param a2: semaphore number
  */
-int sem_reserve_sim(int sem_id, int sem_num)
+int sem_reserve_sim(int id_sem_cell, int sem_num)
 {
   struct sembuf sops;
   settings rules;
   rules = cfg(rules);
   int i;
   int r;
-  printf("pid %d waiting in cell %d\n", getpid(), sem_num + 1);
-
+  sem_reserve(sem_id, 1);
   sops.sem_num = sem_num;
   sops.sem_op = -1;
-  if (r = semop(sem_id, &sops, 1) < 0)
+  if (r = semop(sem_id_cell, &sops, 1) < 0)
   {
     if (errno == EINTR)
     {
-      printf(" pid %d exit 129\n", getpid());
-
-      exit(129);
+      sem_release(sem_id, 1);
+      exit(0);
+    }
+    if (errno == EINVAL)
+    {
+      exit(0);
+    }
+    if (errno == EIDRM)
+    {
+      exit(0);
     }
     else
     {
       TEST_ERROR;
     }
   }
-  return r;
+  sem_release(sem_id, 1);
 }
 
 /**
@@ -334,6 +388,7 @@ int sem_reserve_sim(int sem_id, int sem_num)
  */
 int wait_for_zero(int sem_id, int sem_num)
 {
+  int i, j;
   struct sembuf sops;
   sops.sem_num = sem_num;
   sops.sem_op = -1;
@@ -342,3 +397,36 @@ int wait_for_zero(int sem_id, int sem_num)
   return semop(sem_id, &sops, 1);
 }
 
+/**
+ * function to print the most crossed cells by the taxi
+ * @param a1: struct of map
+ * @param a2: struct of settings named rules
+ */
+void top_cells(map my_map, settings rules)
+{
+  int i, j, k = 0;
+  cell topcells[rules.SO_TOP_CELLS];
+  cell max;
+  for (k = 0; k < rules.SO_TOP_CELLS; k++)
+  {
+    max.n_attr = 0;
+    for (i = 0; i < SO_WIDTH; i++)
+    {
+      for (j = 0; j < SO_HEIGHT; j++)
+      {
+        if (max.n_attr < my_map.city[i][j].n_attr)
+        {
+          max = my_map.city[i][j];
+          topcells[k] = max;
+        }
+      }
+    }
+    my_map.city[max.x][max.y].n_attr = 0;
+  }
+  printf("******************************************************\n");
+  printf("Le %d TOP_CELLS sono:\n", rules.SO_TOP_CELLS);
+  for (k = 0; k < rules.SO_TOP_CELLS; k++)
+  {
+    printf("Cell id  %d  con %d attraversamenti\n", topcells[k].id, topcells[k].n_attr);
+  }
+}
